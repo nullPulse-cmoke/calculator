@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dark Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #070707;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .calc {
+      width: 320px;
+      background: #0f0f0f;
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 0 0 1px #2a2a2a, 0 32px 80px rgba(0,0,0,0.6);
+    }
+
+    .display {
+      background: #181818;
+      border-radius: 16px;
+      padding: 20px 20px 14px;
+      margin-bottom: 20px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .history {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: #555;
+      min-height: 18px;
+      text-align: right;
+    }
+
+    .main {
+      font-family: 'Space Mono', monospace;
+      font-size: 36px;
+      color: #f0f0f0;
+      font-weight: 700;
+      letter-spacing: -1px;
+      word-break: break-all;
+      text-align: right;
+      line-height: 1.1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      height: 64px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.08s, opacity 0.08s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+    }
+
+    .btn:active { transform: scale(0.93); opacity: 0.85; }
+
+    .btn-num    { background: #1e1e1e; color: #e8e8e8; }
+    .btn-op     { background: #2a2a2a; color: #a78bfa; font-size: 20px; }
+    .btn-clear  { background: #2d1f1f; color: #f87171; }
+    .btn-special{ background: #1a1f2e; color: #60a5fa; font-size: 14px; font-weight: 400; }
+    .btn-pct    { background: #1a2a1f; color: #4ade80; }
+    .btn-eq     { background: #7c3aed; color: #fff; font-size: 22px; grid-column: span 2; }
+    .btn-zero   { grid-column: span 2; justify-content: flex-start; padding-left: 24px; }
+  </style>
+</head>
+<body>
+  <div class="calc">
+    <div class="display">
+      <div class="history" id="history"></div>
+      <div class="main" id="main">0</div>
+    </div>
+    <div class="grid">
+      <button class="btn btn-clear"   onclick="calc('AC')">AC</button>
+      <button class="btn btn-special" onclick="calc('toggle')">+/−</button>
+      <button class="btn btn-pct"     onclick="calc('%')">%</button>
+      <button class="btn btn-op"      onclick="calc('/')">÷</button>
+
+      <button class="btn btn-num" onclick="calc('7')">7</button>
+      <button class="btn btn-num" onclick="calc('8')">8</button>
+      <button class="btn btn-num" onclick="calc('9')">9</button>
+      <button class="btn btn-op"  onclick="calc('*')">×</button>
+
+      <button class="btn btn-num" onclick="calc('4')">4</button>
+      <button class="btn btn-num" onclick="calc('5')">5</button>
+      <button class="btn btn-num" onclick="calc('6')">6</button>
+      <button class="btn btn-op"  onclick="calc('-')">−</button>
+
+      <button class="btn btn-num" onclick="calc('1')">1</button>
+      <button class="btn btn-num" onclick="calc('2')">2</button>
+      <button class="btn btn-num" onclick="calc('3')">3</button>
+      <button class="btn btn-op"  onclick="calc('+')">+</button>
+
+      <button class="btn btn-num btn-zero" onclick="calc('0')">0</button>
+      <button class="btn btn-num" onclick="calc('.')">.</button>
+      <button class="btn btn-eq"  onclick="calc('=')">=</button>
+    </div>
+  </div>
+
+  <script>
+    let cur = '0', prev = '', op = '', freshResult = false;
+    const mainEl = document.getElementById('main');
+    const histEl = document.getElementById('history');
+
+    function updateDisplay() {
+      let txt = cur;
+      if (txt.length > 10) txt = parseFloat(cur).toExponential(4);
+      mainEl.textContent = txt;
+    }
+
+    function calc(val) {
+      if (val === 'AC') {
+        cur = '0'; prev = ''; op = ''; freshResult = false;
+        histEl.textContent = ''; updateDisplay(); return;
+      }
+      if (val === 'toggle') {
+        cur = cur.startsWith('-') ? cur.slice(1) : (cur === '0' ? '0' : '-' + cur);
+        updateDisplay(); return;
+      }
+      if (val === '%') { cur = String(parseFloat(cur) / 100); updateDisplay(); return; }
+      if (['+', '-', '*', '/'].includes(val)) {
+        if (prev && op && !freshResult) cur = String(evaluate(parseFloat(prev), parseFloat(cur), op));
+        prev = cur; op = val; freshResult = false;
+        histEl.textContent = prev + ' ' + {'+':'+','-':'−','*':'×','/':'÷'}[val];
+        cur = '0'; updateDisplay(); return;
+      }
+      if (val === '=') {
+        if (!op || !prev) return;
+        const result = evaluate(parseFloat(prev), parseFloat(cur), op);
+        histEl.textContent = prev + ' ' + {'+':'+','-':'−','*':'×','/':'÷'}[op] + ' ' + cur + ' =';
+        cur = isFinite(result) ? String(+result.toFixed(10)) : 'Error';
+        prev = ''; op = ''; freshResult = true; updateDisplay(); return;
+      }
+      if (val === '.') {
+        if (freshResult) { cur = '0'; freshResult = false; }
+        if (!cur.includes('.')) cur += '.';
+        updateDisplay(); return;
+      }
+      if (freshResult) { cur = '0'; freshResult = false; }
+      if (cur === '0' && val !== '.') cur = val;
+      else if (cur.length < 12) cur += val;
+      updateDisplay();
+    }
+
+    function evaluate(a, b, op) {
+      if (op === '+') return a + b;
+      if (op === '-') return a - b;
+      if (op === '*') return a * b;
+      if (op === '/') return b === 0 ? NaN : a / b;
+    }
+
+    document.addEventListener('keydown', e => {
+      const map = {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+        '+':'+','-':'-','*':'*','/':'/','Enter':'=','=':'=','Backspace':'AC','.':'.'};
+      if (map[e.key]) calc(map[e.key]);
+    });
+  </script>
+</body>
+</html>
